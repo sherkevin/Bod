@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Bod - Voice AI Trainer</title>
+  <link rel="manifest" href="manifest.json" />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              900: '#0c4a6e',
+            }
+          },
+          animation: {
+            'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col font-sans selection:bg-brand-500 selection:text-white">
+  
+  <!-- Header -->
+  <header class="bg-gray-800/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-700">
+    <div class="container mx-auto max-w-md px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400 to-blue-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i class="fas fa-dumbbell text-white text-sm"></i>
+        </div>
+        <h1 class="text-xl font-bold tracking-tight">Bod <span class="text-brand-400">AI</span></h1>
+      </div>
+      <div id="status" class="text-xs font-medium px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400 transition-all duration-300">
+        <i class="fas fa-circle text-[8px] mr-1.5 text-gray-500"></i>离线
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 container mx-auto max-w-md p-4 pb-24 flex flex-col gap-6">
+    
+    <!-- Voice Interaction Area -->
+    <section class="flex flex-col items-center justify-center py-8 relative">
+      <!-- Ripple Effect Container -->
+      <div class="relative group">
+        <div id="recordRipple" class="absolute inset-0 bg-brand-500 rounded-full opacity-0 blur-xl transition-all duration-500 group-hover:opacity-20"></div>
+        <button id="recordBtn" class="relative w-24 h-24 rounded-full bg-gradient-to-b from-gray-700 to-gray-800 border border-gray-600 shadow-[0_8px_16px_rgba(0,0,0,0.3)] flex items-center justify-center text-3xl text-gray-300 transition-all duration-200 active:scale-95 hover:text-white hover:border-brand-500/50">
+          <i class="fas fa-microphone"></i>
+        </button>
+      </div>
+      
+      <p class="mt-6 text-gray-500 text-sm font-medium tracking-wide">按住说话 / 松开结束</p>
+      
+      <div id="transcript-container" class="mt-4 w-full min-h-[40px] flex items-center justify-center">
+        <div id="transcript" class="text-center text-sm text-gray-300 bg-gray-800/50 px-4 py-2 rounded-xl border border-white/5 backdrop-blur-sm max-w-[90%] empty:hidden">
+          <!-- Transcript text will appear here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab Navigation -->
+    <nav class="grid grid-cols-3 bg-gray-800/50 p-1.5 rounded-2xl border border-white/5 backdrop-blur-sm sticky top-20 z-40">
+      <button class="tab-btn active flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-gray-400 hover:text-white" data-target="history">
+        <i class="fas fa-list-ul"></i> 历史
+      </button>
+      <button class="tab-btn flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-gray-400 hover:text-white" data-target="stats">
+        <i class="fas fa-chart-line"></i> 进度
+      </button>
+      <button class="tab-btn flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-gray-400 hover:text-white" data-target="plan">
+        <i class="fas fa-brain"></i> 计划
+      </button>
+    </nav>
+
+    <!-- Content Panels -->
+    <div class="relative min-h-[300px]">
+      
+      <!-- History Panel -->
+      <div id="history-panel" class="tab-panel transition-opacity duration-300">
+        <div id="logs-list" class="space-y-4">
+          <!-- Skeleton Loading State -->
+          <div class="animate-pulse space-y-4 opacity-50">
+             <div class="h-24 bg-gray-800 rounded-xl"></div>
+             <div class="h-24 bg-gray-800 rounded-xl"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Panel -->
+      <div id="stats-panel" class="tab-panel hidden transition-opacity duration-300">
+        <div class="bg-gray-800 border border-gray-700 p-4 rounded-2xl shadow-xl">
+          <h3 class="text-sm font-bold text-gray-400 mb-4 flex items-center gap-2">
+            <i class="fas fa-chart-area text-brand-500"></i> 力量表现趋势
+          </h3>
+          <div class="h-64 w-full">
+            <canvas id="progressChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan Panel -->
+      <div id="plan-panel" class="tab-panel hidden transition-opacity duration-300 space-y-6">
+        
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 p-6 rounded-3xl shadow-xl">
+          <div class="text-center mb-6">
+            <div class="w-12 h-12 bg-brand-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
+              <i class="fas fa-robot text-brand-500 text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white">AI 智能教练</h3>
+            <p class="text-xs text-gray-400 mt-1">基于您的历史表现生成下周训练计划</p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">训练目标</label>
+              <div class="relative">
+                <select id="goalSelect" class="w-full appearance-none bg-gray-900 text-white rounded-xl p-4 pl-12 outline-none border border-gray-700 focus:border-brand-500 transition-colors">
+                  <option value="增肌 (Hypertrophy)">💪 增肌 (Hypertrophy)</option>
+                  <option value="力量 (Strength)">🏋️ 力量 (Strength)</option>
+                  <option value="减脂 (Fat Loss)">🔥 减脂 (Fat Loss)</option>
+                  <option value="耐力 (Endurance)">🏃 耐力 (Endurance)</option>
+                </select>
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                  <i class="fas fa-bullseye"></i>
+                </div>
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                  <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+              </div>
+            </div>
+
+            <button id="generatePlanBtn" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-brand-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+              <span>生成周计划</span>
+              <i class="fas fa-arrow-right text-sm opacity-70"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="planResult" class="hidden animate-fade-in">
+           <!-- Plan result injected here -->
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .catch(err => console.log('SW registration failed: ', err));
+      });
+    }
+  </script>
+</body>
+</html>

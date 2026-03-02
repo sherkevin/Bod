@@ -1,0 +1,16 @@
+{
+  "name": "Bod - AI Workout Assistant",
+  "short_name": "Bod",
+  "description": "Voice-first AI workout tracker and coach.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4CAF50",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
